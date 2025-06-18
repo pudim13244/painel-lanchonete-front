@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -30,41 +29,14 @@ interface OrderModalProps {
 }
 
 export const OrderModal = ({ order, isOpen, onClose }: OrderModalProps) => {
-  const [status, setStatus] = useState(order?.status || "pending");
+  const [status, setStatus] = useState<"pending" | "preparing" | "ready" | "delivering" | "completed">(order?.status || "pending");
   const [notes, setNotes] = useState("");
   const { toast } = useToast();
 
   if (!order) return null;
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending": return "bg-yellow-100 text-yellow-800";
-      case "preparing": return "bg-blue-100 text-blue-800";
-      case "ready": return "bg-green-100 text-green-800";
-      case "delivering": return "bg-orange-100 text-orange-800";
-      case "completed": return "bg-gray-100 text-gray-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "pending": return "Pendente";
-      case "preparing": return "Preparando";
-      case "ready": return "Pronto";
-      case "delivering": return "Em Entrega";
-      case "completed": return "Concluído";
-      default: return status;
-    }
-  };
-
-  const getTypeText = (type: string) => {
-    switch (type) {
-      case "local": return "Consumo Local";
-      case "delivery": return "Entrega";
-      case "pickup": return "Retirada";
-      default: return type;
-    }
+  const handleStatusChange = (value: string) => {
+    setStatus(value as "pending" | "preparing" | "ready" | "delivering" | "completed");
   };
 
   const handleSave = () => {
@@ -164,7 +136,7 @@ export const OrderModal = ({ order, isOpen, onClose }: OrderModalProps) => {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">Atualizar Status</label>
-              <Select value={status} onValueChange={setStatus}>
+              <Select value={status} onValueChange={handleStatusChange}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -208,4 +180,35 @@ export const OrderModal = ({ order, isOpen, onClose }: OrderModalProps) => {
       </DialogContent>
     </Dialog>
   );
+
+  function getStatusColor(status: string) {
+    switch (status) {
+      case "pending": return "bg-yellow-100 text-yellow-800";
+      case "preparing": return "bg-blue-100 text-blue-800";
+      case "ready": return "bg-green-100 text-green-800";
+      case "delivering": return "bg-orange-100 text-orange-800";
+      case "completed": return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-100 text-gray-800";
+    }
+  }
+
+  function getStatusText(status: string) {
+    switch (status) {
+      case "pending": return "Pendente";
+      case "preparing": return "Preparando";
+      case "ready": return "Pronto";
+      case "delivering": return "Em Entrega";
+      case "completed": return "Concluído";
+      default: return status;
+    }
+  }
+
+  function getTypeText(type: string) {
+    switch (type) {
+      case "local": return "Consumo Local";
+      case "delivery": return "Entrega";
+      case "pickup": return "Retirada";
+      default: return type;
+    }
+  }
 };
