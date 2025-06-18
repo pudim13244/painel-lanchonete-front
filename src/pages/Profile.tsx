@@ -154,7 +154,7 @@ const Profile = () => {
                       id="closeTime"
                       type="time"
                       value={profile.closeTime}
-                      onChange={(e) => handleProfile Change("closeTime", e.target.value)}
+                      onChange={(e) => handleProfileChange("closeTime", e.target.value)}
                     />
                   </div>
                 </div>
