@@ -6,89 +6,81 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Cores principais do tema */
+    --main-red: 347, 76%, 40%; /* #B21735 */
+    --main-beige: 18, 27%, 91%; /* #EDE2DC */
+    --main-dark: 348, 44%, 13%; /* #361617 */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* Aplicar as cores principais nos tokens do tema */
+    --background: var(--main-beige);
+    --foreground: var(--main-dark);
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --card: var(--main-beige);
+    --card-foreground: var(--main-dark);
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --popover: var(--main-beige);
+    --popover-foreground: var(--main-dark);
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --primary: var(--main-red);
+    --primary-foreground: var(--main-beige);
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --secondary: var(--main-dark);
+    --secondary-foreground: var(--main-beige);
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --muted: var(--main-beige);
+    --muted-foreground: var(--main-dark);
+
+    --accent: var(--main-red);
+    --accent-foreground: var(--main-beige);
 
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: var(--main-beige);
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: var(--main-dark);
+    --input: var(--main-dark);
+    --ring: var(--main-red);
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: var(--main-dark);
+    --sidebar-foreground: var(--main-beige);
+    --sidebar-primary: var(--main-red);
+    --sidebar-primary-foreground: var(--main-beige);
+    --sidebar-accent: var(--main-beige);
+    --sidebar-accent-foreground: var(--main-dark);
+    --sidebar-border: var(--main-red);
+    --sidebar-ring: var(--main-red);
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
+    /* Para modo escuro, pode inverter as cores se desejar */
+    --background: var(--main-dark);
+    --foreground: var(--main-beige);
+    --card: var(--main-dark);
+    --card-foreground: var(--main-beige);
+    --popover: var(--main-dark);
+    --popover-foreground: var(--main-beige);
+    --primary: var(--main-red);
+    --primary-foreground: var(--main-beige);
+    --secondary: var(--main-beige);
+    --secondary-foreground: var(--main-dark);
+    --muted: var(--main-dark);
+    --muted-foreground: var(--main-beige);
+    --accent: var(--main-red);
+    --accent-foreground: var(--main-beige);
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --destructive-foreground: var(--main-beige);
+    --border: var(--main-beige);
+    --input: var(--main-beige);
+    --ring: var(--main-red);
+    --sidebar-background: var(--main-red);
+    --sidebar-foreground: var(--main-beige);
+    --sidebar-primary: var(--main-dark);
+    --sidebar-primary-foreground: var(--main-beige);
+    --sidebar-accent: var(--main-beige);
+    --sidebar-accent-foreground: var(--main-dark);
+    --sidebar-border: var(--main-red);
+    --sidebar-ring: var(--main-red);
   }
 }
 

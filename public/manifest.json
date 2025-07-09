@@ -1,0 +1,21 @@
+{
+  "name": "QuickPainel",
+  "short_name": "QuickPainel",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f8f5f2",
+  "theme_color": "#7a1c1c",
+  "description": "Painel de pedidos para estabelecimentos.",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+} 

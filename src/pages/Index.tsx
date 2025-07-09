@@ -1,5 +1,5 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,77 +8,166 @@ import { ShoppingCart, Home, Package, Clock } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { MenuCard } from "@/components/MenuCard";
 import { CartSidebar } from "@/components/CartSidebar";
+import { EstablishmentSelector } from "@/components/EstablishmentSelector";
+import { ProductDetailsModal } from "@/components/ProductDetailsModal";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import api from "@/lib/axios";
 
-interface CartItem {
-  id: string;
+interface Option {
+  id: number;
   name: string;
   price: number;
+  description?: string;
   quantity: number;
-  image: string;
+}
+
+interface AdditionalGroup {
+  id: number;
+  name: string;
+  type: string;
+  min_selections: number;
+  max_selections: number;
+  is_required: boolean;
+  options: Option[];
+}
+
+interface MenuItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  image_url: string;
+  category: {
+    id: number;
+    name: string;
+  };
+  additional_groups: AdditionalGroup[];
+}
+
+interface CartItem extends MenuItem {
+  quantity: number;
+  selectedOptions: Option[];
+  obs: string;
+  establishment_id?: number;
+}
+
+interface CartContextType {
+  items: CartItem[];
+  setItems: (items: CartItem[]) => void;
+  addItem: (item: CartItem) => void;
+  removeItem: (itemId: string) => void;
+  clearCart: () => void;
+  total: number;
 }
 
 const Index = () => {
+  const [loading, setLoading] = useState(true);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [orderType, setOrderType] = useState<"local" | "delivery" | "pickup">("local");
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<MenuItem | null>(null);
+  const [selectedEstablishmentId, setSelectedEstablishmentId] = useState<number | null>(null);
+  const [orderType, setOrderType] = useState<"local" | "delivery" | "pickup">("local");
+  const [selectedCategory, setSelectedCategory] = useState<string>("Todos");
+
+  const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
 
-  const menuItems = [
-    {
-      id: "1",
-      name: "X-Burguer Especial",
-      description: "Hambúrguer artesanal com queijo, alface, tomate e molho especial",
-      price: 25.90,
-      image: "https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=400&h=300&fit=crop&crop=center",
-      category: "Hambúrguers"
-    },
-    {
-      id: "2",
-      name: "Pizza Margherita",
-      description: "Massa artesanal, molho de tomate, mussarela e manjericão",
-      price: 35.00,
-      image: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop&crop=center",
-      category: "Pizzas"
-    },
-    {
-      id: "3",
-      name: "Batata Frita Especial",
-      description: "Batatas crocantes com tempero especial da casa",
-      price: 15.50,
-      image: "https://images.unsplash.com/photo-1630384060421-cb20d0e0649d?w=400&h=300&fit=crop&crop=center",
-      category: "Acompanhamentos"
-    },
-    {
-      id: "4",
-      name: "Refrigerante 350ml",
-      description: "Coca-Cola, Guaraná ou Sprite",
-      price: 6.00,
-      image: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&h=300&fit=crop&crop=center",
-      category: "Bebidas"
+  useEffect(() => {
+    if (isAuthenticated && user?.role === 'ESTABLISHMENT' && user.id) {
+      if(selectedEstablishmentId !== user.id) {
+        setSelectedEstablishmentId(user.id);
+      }
     }
-  ];
+  }, [isAuthenticated, user, selectedEstablishmentId]);
 
-  const addToCart = (item: any) => {
-    const existingItem = cartItems.find(cartItem => cartItem.id === item.id);
-    
-    if (existingItem) {
-      setCartItems(cartItems.map(cartItem =>
-        cartItem.id === item.id
-          ? { ...cartItem, quantity: cartItem.quantity + 1 }
-          : cartItem
-      ));
-    } else {
-      setCartItems([...cartItems, { ...item, quantity: 1 }]);
+  useEffect(() => {
+    const fetchProducts = async () => {
+      if (!selectedEstablishmentId) {
+        setLoading(false);
+        setMenuItems([]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const response = await api.get(`/products?establishment_id=${selectedEstablishmentId}`);
+        
+        const formattedProducts: MenuItem[] = response.data.products.map((product: any) => ({
+          id: product.id.toString(),
+          name: product.name,
+          description: product.description || '',
+          price: typeof product.price === 'string' ? parseFloat(product.price) : (product.price || 0),
+          image_url: product.image_url,
+          category: {
+            id: product.category.id,
+            name: product.category.name
+          },
+          additional_groups: product.additional_groups || []
+        }));
+
+        setMenuItems(formattedProducts);
+      } catch (error) {
+        console.error('Erro ao buscar produtos:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os produtos.",
+          variant: "destructive",
+        });
+        setMenuItems([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [selectedEstablishmentId, toast]);
+
+  const openProductDetails = (item: MenuItem) => {
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
     }
+    setSelectedProduct(item);
+    setIsProductModalOpen(true);
+  };
+
+  const addToCart = (
+    product: MenuItem,
+    selectedOptions: Option[],
+    obs: string
+  ) => {
+    const cartItem: CartItem = {
+      ...product,
+      quantity: 1,
+      selectedOptions,
+      obs,
+      establishment_id: selectedEstablishmentId || undefined
+    };
+
+    setCartItems(prev => [...prev, cartItem]);
+    setIsCartOpen(true);
     
     toast({
       title: "Item adicionado!",
-      description: `${item.name} foi adicionado ao carrinho.`,
+      description: `${product.name} foi adicionado ao carrinho.`,
     });
   };
 
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  const handleEstablishmentSelect = (establishmentId: number) => {
+    setSelectedEstablishmentId(establishmentId);
+  };
+
+  const categories = ["Todos", ...Array.from(new Set(menuItems.map(item => item.category.name)))];
+
+  const filteredItems = menuItems.filter(item => 
+    selectedCategory === "Todos" || item.category.name === selectedCategory
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-green-50">
@@ -87,80 +176,150 @@ const Index = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-4 text-center">
-            Lanchonete <span className="text-orange-600">Sabor</span><span className="text-green-600">Express</span>
+            <span className="text-3xl font-bold">
+              QuickPainel
+            </span>
           </h1>
           
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5" />
-                Tipo de Pedido
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Tabs value={orderType} onValueChange={(value: any) => setOrderType(value)}>
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="local" className="flex items-center gap-2">
-                    <Home className="w-4 h-4" />
-                    Consumo Local
-                  </TabsTrigger>
-                  <TabsTrigger value="delivery" className="flex items-center gap-2">
-                    <Package className="w-4 h-4" />
-                    Entrega
-                  </TabsTrigger>
-                  <TabsTrigger value="pickup" className="flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    Retirada
-                  </TabsTrigger>
+          {isAuthenticated && user && user.role === 'ESTABLISHMENT' && (
+            <div className="text-center mb-4">
+              <p className="text-gray-600">
+                Exibindo produtos do seu estabelecimento: <span className="font-semibold">{user.name}</span>
+              </p>
+            </div>
+            
+          )}
+          
+          {isAuthenticated && user && user.role === 'CUSTOMER' && (
+            <>
+              <EstablishmentSelector 
+                onSelect={handleEstablishmentSelect}
+                selectedId={selectedEstablishmentId || undefined}
+              />
+              {selectedEstablishmentId && (
+                <div className="text-center mb-4">
+                  <p className="text-gray-600">
+                    Estabelecimento selecionado
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+          
+          {isAuthenticated && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="w-5 h-5" />
+                  Tipo de Pedido
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Tabs value={orderType} onValueChange={(value: any) => setOrderType(value)}>
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="local" className="flex items-center gap-2">
+                      <Home className="w-4 h-4" />
+                      Consumo Local
+                    </TabsTrigger>
+                    <TabsTrigger value="delivery" className="flex items-center gap-2">
+                      <Package className="w-4 h-4" />
+                      Entrega
+                    </TabsTrigger>
+                    <TabsTrigger value="pickup" className="flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      Retirada
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="local" className="mt-4">
+                    <p className="text-gray-600">Pedido para consumo no local. A mesa será definida no checkout.</p>
+                  </TabsContent>
+                  <TabsContent value="delivery" className="mt-4">
+                    <p className="text-gray-600">Entrega em domicílio. Taxa de entrega será calculada no checkout.</p>
+                  </TabsContent>
+                  <TabsContent value="pickup" className="mt-4">
+                    <p className="text-gray-600">Retirada no balcão. Tempo estimado: 15-20 minutos.</p>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          )}
+
+          {menuItems.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-700 mb-4">Categorias</h2>
+              <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
+                <TabsList className="flex flex-wrap h-auto">
+                  {categories.map(category => (
+                    <TabsTrigger key={category} value={category} className="flex-shrink-0">
+                      {category}
+                    </TabsTrigger>
+                  ))}
                 </TabsList>
-                
-                <TabsContent value="local" className="mt-4">
-                  <p className="text-gray-600">Pedido para consumo no local. Mesa será definida no checkout.</p>
-                </TabsContent>
-                <TabsContent value="delivery" className="mt-4">
-                  <p className="text-gray-600">Entrega em domicílio. Taxa de entrega será calculada no checkout.</p>
-                </TabsContent>
-                <TabsContent value="pickup" className="mt-4">
-                  <p className="text-gray-600">Retirada no balcão. Tempo estimado: 15-20 minutos.</p>
-                </TabsContent>
               </Tabs>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
-          {menuItems.map((item) => (
-            <MenuCard
-              key={item.id}
-              item={item}
-              onAddToCart={addToCart}
-            />
-          ))}
-        </div>
-      </div>
-
-      <Button
-        onClick={() => setIsCartOpen(true)}
-        className="fixed bottom-6 right-6 h-16 w-16 rounded-full bg-orange-600 hover:bg-orange-700 shadow-lg hover:shadow-xl transition-all duration-300 z-50"
-        size="lg"
-      >
-        <div className="relative">
-          <ShoppingCart className="w-6 h-6" />
-          {totalItems > 0 && (
-            <Badge className="absolute -top-2 -right-2 bg-green-600 text-white text-xs min-w-[20px] h-5 flex items-center justify-center rounded-full">
-              {totalItems}
-            </Badge>
+            </div>
           )}
         </div>
-      </Button>
 
-      <CartSidebar
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        items={cartItems}
-        onUpdateItems={setCartItems}
-        orderType={orderType}
-      />
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
+          </div>
+        ) : menuItems.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">Nenhum produto encontrado.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+            {filteredItems.map((item) => (
+              <MenuCard
+                key={item.id}
+                item={item}
+                onAddToCart={() => openProductDetails(item)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {isAuthenticated && (
+        <>
+          <Button
+            onClick={() => setIsCartOpen(true)}
+            className="fixed bottom-6 right-6 h-16 w-16 rounded-full bg-orange-600 hover:bg-orange-700 shadow-lg hover:shadow-xl transition-all duration-300 z-50"
+            size="lg"
+          >
+            <div className="relative">
+              <ShoppingCart className="w-6 h-6" />
+              {totalItems > 0 && (
+                <Badge
+                  className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 bg-green-600"
+                  variant="secondary"
+                >
+                  {totalItems}
+                </Badge>
+              )}
+            </div>
+          </Button>
+
+          <CartSidebar
+            isOpen={isCartOpen}
+            onClose={() => setIsCartOpen(false)}
+            items={cartItems}
+            onUpdateItems={setCartItems}
+            orderType={orderType}
+          />
+        </>
+      )}
+
+      {selectedProduct && (
+        <ProductDetailsModal
+          isOpen={isProductModalOpen}
+          onClose={() => setIsProductModalOpen(false)}
+          product={selectedProduct}
+          onAddToCart={addToCart}
+        />
+      )}
     </div>
   );
 };

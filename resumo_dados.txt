@@ -1,0 +1,40 @@
+# 🔗 Relação de Dados - Sistema de Produtos
+
+## 🗂️ Categorias
+- Cada categoria possui:
+  - `codigo`: Identificador único da categoria.
+  - `nome`: Nome da categoria.
+  - Exemplo: (727, "Hambúrguer artesanal")
+
+## 🍔 Produtos
+- Cada produto possui:
+  - `nome`: Nome do produto.
+  - `descricao`: Descrição detalhada.
+  - `preco`: Preço do produto.
+  - `categoria`: Relaciona-se com `CATEGORIAS(codigo)`.
+  - Até 3 grupos de adicionais (`grupo_adicional1`, `grupo_adicional2`, `grupo_adicional3`).
+- Exemplo de Produto:
+  - Nome: Oba Duplo
+  - Categoria: 727 (Hambúrguer artesanal)
+  - Grupos adicionais: 3 (Acréscimos), 4 (Hambúrgueres)
+
+## ➕ Grupos de Adicionais
+- Cada grupo possui:
+  - `codigo`: ID do grupo.
+  - `nome`: Nome do grupo (Ex.: Acréscimos, Hambúrgueres).
+  - `tipo`: Tipo de grupo (Ex.: EXTRA).
+  - `min_selecoes`: Mínimo de seleções permitidas.
+  - `max_selecoes`: Máximo de seleções permitidas.
+
+## 🧀 Opções
+- Cada opção pertence a um grupo (`grupo_codigo`).
+- Dados da opção:
+  - `nome`: Nome da opção (Ex.: Bacon, Catupiry).
+  - `preco_adicional`: Valor adicional.
+  - `descricao`: Descrição opcional.
+
+## 🔄 Relação Geral
+- **Produtos → Categoria:** Pelo campo `categoria`.
+- **Produtos → Grupos de Adicionais:** Pelos campos `grupo_adicional1`, `grupo_adicional2`, `grupo_adicional3`.
+- **Grupos de Adicionais → Opções:** Pelo campo `grupo_codigo`.
+

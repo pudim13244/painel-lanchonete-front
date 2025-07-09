@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -209,7 +208,7 @@ const Delivery = () => {
                   <CardHeader className="pb-3">
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gradient-to-r from-orange-400 to-green-400 rounded-full flex items-center justify-center text-white font-bold">
+                        <div className="w-12 h-12 bg-[#B21735] rounded-full flex items-center justify-center text-white font-bold">
                           {person.name.split(' ').map(n => n[0]).join('')}
                         </div>
                         <div>
