@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, Package, CheckCircle, Truck, Edit3, Eye, Loader2, RefreshCw, Printer, AlertCircle, Plus } from "lucide-react";
+import { Clock, Package, CheckCircle, Truck, Edit3, Eye, Loader2, RefreshCw, Printer, AlertCircle, Plus, UserPlus } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { OrderModal } from "@/components/OrderModal";
 import { CreateOrderModal } from "@/components/CreateOrderModal";
@@ -16,6 +16,24 @@ import notificationSound from '@/assets/notification.mp3';
 import { useNavigate } from "react-router-dom";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+// Função utilitária para obter o próximo status e o texto do botão
+const getNextStatusAction = (status: Order['status']) => {
+  switch (status) {
+    case 'PENDING':
+      return { label: 'Aceitar', next: 'PREPARING' };
+    case 'PREPARING':
+      return { label: 'Pronto para Entrega', next: 'READY' };
+    case 'READY':
+      return { label: 'Enviar para Entrega', next: 'DELIVERING' };
+    case 'DELIVERING':
+      return { label: 'Finalizar', next: 'DELIVERED' };
+    default:
+      return null;
+  }
+};
 
 // Componente otimizado para card de pedido
 const OrderCard = React.memo(({ 
@@ -121,29 +139,26 @@ const OrderCard = React.memo(({
           </div>
           
           <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant={order.status === 'PENDING' ? "default" : "outline"}
-              onClick={handleStatusClick}
-              className={`flex-1 font-semibold ${
-                order.status === 'PENDING' 
-                  ? 'bg-green-600 hover:bg-green-700 text-white' 
-                  : 'hover:bg-green-50'
-              }`}
-            >
-              {order.status === 'PENDING' ? (
-                <>
-                  <CheckCircle className="w-4 h-4 mr-1" />
-                  Aceitar
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-4 h-4 mr-1" />
-                  Finalizar
-                </>
-              )}
-            </Button>
-
+            {(() => {
+              const next = getNextStatusAction(order.status);
+              if (next) {
+                return (
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={e => {
+                      e.stopPropagation();
+                      onStatusUpdate(order.id, next.next as Order['status']);
+                    }}
+                    className="flex-1 font-semibold bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-1" />
+                    {next.label}
+                  </Button>
+                );
+              }
+              return null;
+            })()}
             <Button
               size="sm"
               variant="outline"
@@ -162,6 +177,175 @@ const OrderCard = React.memo(({
 
 OrderCard.displayName = 'OrderCard';
 
+// Componente para seleção de entregador
+const DeliveryAssignmentModal = ({ 
+  order, 
+  isOpen, 
+  onClose, 
+  onAssign 
+}: {
+  order: Order | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onAssign: (deliveryId: number) => void;
+}) => {
+  const [availableDeliveries, setAvailableDeliveries] = useState<any[]>([]);
+  const [selectedDelivery, setSelectedDelivery] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (isOpen && order) {
+      loadAvailableDeliveries();
+    }
+  }, [isOpen, order]);
+
+  const loadAvailableDeliveries = async () => {
+    if (!order) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/orders/${order.id}/available-deliveries`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableDeliveries(data.available_deliveries || []);
+      } else {
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os entregadores disponíveis",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao carregar entregadores:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar entregadores disponíveis",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAssign = async () => {
+    if (!selectedDelivery || !order) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/orders/${order.id}/assign-delivery`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          delivery_id: parseInt(selectedDelivery)
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        toast({
+          title: "Sucesso",
+          description: `Entregador ${data.delivery_name} atribuído com sucesso!`,
+        });
+        onAssign(parseInt(selectedDelivery));
+        onClose();
+      } else {
+        const errorData = await response.json();
+        toast({
+          title: "Erro",
+          description: errorData.message || "Erro ao atribuir entregador",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao atribuir entregador:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atribuir entregador",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Atribuir Entregador - Pedido #{order?.id}</DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin" />
+              <span className="ml-2">Carregando entregadores...</span>
+            </div>
+          ) : availableDeliveries.length === 0 ? (
+            <div className="text-center py-8">
+              <AlertCircle className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
+              <p className="text-gray-600">Nenhum entregador disponível no momento</p>
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Selecione um entregador:
+                </label>
+                <Select value={selectedDelivery} onValueChange={setSelectedDelivery}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Escolha um entregador" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableDeliveries.map((delivery) => (
+                      <SelectItem key={delivery.id} value={delivery.id.toString()}>
+                        {delivery.name} - {delivery.vehicle_type || 'Sem veículo'} 
+                        ({delivery.active_orders} pedidos ativos)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={onClose}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleAssign}
+                  disabled={!selectedDelivery || isLoading}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Atribuindo...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Atribuir
+                    </>
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const Orders = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -169,6 +353,8 @@ const Orders = () => {
   const [orderType, setOrderType] = useState<string>("DELIVERY");
   const [printData, setPrintData] = useState(null);
   const [isPending, startTransition] = useTransition();
+  const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
+  const [orderForDelivery, setOrderForDelivery] = useState<Order | null>(null);
   
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -203,7 +389,22 @@ const Orders = () => {
 
   // Filtrar pedidos pelo tipo selecionado e remover os entregues
   const filteredOrders = useMemo(() => {
-    return orders.filter(order => order.order_type === orderType && order.status !== 'DELIVERED');
+    // Primeiro, filtra pelo tipo e remove entregues
+    const filtered = orders.filter(order => order.order_type === orderType && order.status !== 'DELIVERED');
+    // Ordena: pendentes no topo, preparando no meio, prontos no final, todos por data de criação
+    return filtered.sort((a, b) => {
+      const statusOrder = (status) => {
+        if (status === 'PENDING') return 0;
+        if (status === 'PREPARING') return 1;
+        if (status === 'READY') return 2;
+        return 3; // outros status
+      };
+      const aOrder = statusOrder(a.status);
+      const bOrder = statusOrder(b.status);
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      // Se mesmo grupo, ordena por data de criação
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
   }, [orders, orderType]);
 
   // Funções utilitárias (getStatusText, getTypeText, etc.)
@@ -260,6 +461,28 @@ const Orders = () => {
       minute: '2-digit'
     });
   }, []);
+
+
+
+  // Função para abrir modal de atribuição de entregador
+  const handleAssignDelivery = useCallback((order: Order) => {
+    setOrderForDelivery(order);
+    setIsDeliveryModalOpen(true);
+  }, []);
+
+  // Função para quando entregador for atribuído
+  const handleDeliveryAssigned = useCallback((deliveryId: number) => {
+    if (orderForDelivery) {
+      // Atualizar o pedido localmente
+      const updatedOrder = { ...orderForDelivery, delivery_id: deliveryId, status: 'READY' as const };
+      updateOrder(orderForDelivery.id, updatedOrder);
+      
+      toast({
+        title: "Sucesso",
+        description: "Entregador atribuído com sucesso!",
+      });
+    }
+  }, [orderForDelivery, updateOrder, toast]);
 
   // Efeitos otimizados
   useEffect(() => {
@@ -388,6 +611,7 @@ const Orders = () => {
                 <TableHead>Endereço/Mesa</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Entregador</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
@@ -395,7 +619,7 @@ const Orders = () => {
             <TableBody>
               {filteredOrders.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-gray-500 py-8">
+                  <TableCell colSpan={9} className="text-center text-gray-500 py-8">
                     Nenhum pedido encontrado para este tipo.
                   </TableCell>
                 </TableRow>
@@ -410,6 +634,16 @@ const Orders = () => {
                   <TableCell>
                     <Badge className={getStatusColor(order.status)}>{getStatusText(order.status)}</Badge>
                   </TableCell>
+                  <TableCell>
+                    {order.delivery_person_name ? (
+                      <p className="text-sm text-blue-600 flex items-center gap-1">
+                        <span>🚗</span>
+                        <span>{order.delivery_person_name}</span>
+                      </p>
+                    ) : (
+                      <p className="text-sm text-gray-600">Nenhum entregador atribuído</p>
+                    )}
+                  </TableCell>
                   <TableCell className="font-semibold text-green-700">
                     R$ {(Number(order.total_amount || 0) + Number(order.delivery_fee || 0)).toFixed(2)}
                   </TableCell>
@@ -421,6 +655,22 @@ const Orders = () => {
                       <Button size="sm" variant="outline" onClick={() => updateOrderStatus(order.id, order.status === 'PENDING' ? 'PREPARING' : 'DELIVERED')}>
                         {order.status === 'PENDING' ? 'Aceitar' : 'Finalizar'}
                       </Button>
+                      {order.status === 'PREPARING' && (
+                        <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => updateOrderStatus(order.id, 'READY')}>
+                          Pedido Pronto
+                        </Button>
+                      )}
+                      {order.status === 'PENDING' && order.order_type === 'DELIVERY' && !order.delivery_id && (
+                        <Button size="sm" variant="outline" onClick={() => handleAssignDelivery(order)}>
+                          Atribuir Entregador
+                        </Button>
+                      )}
+                      {order.delivery_id && (
+                        <Button size="sm" variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                          <Truck className="w-3 h-3 mr-1" />
+                          Entregador #{order.delivery_id}
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -452,6 +702,14 @@ const Orders = () => {
           setIsCreateModalOpen(false);
         }}
         establishmentId={user?.id}
+      />
+
+      {/* Modal de atribuição de entregador */}
+      <DeliveryAssignmentModal
+        order={orderForDelivery}
+        isOpen={isDeliveryModalOpen}
+        onClose={() => setIsDeliveryModalOpen(false)}
+        onAssign={handleDeliveryAssigned}
       />
 
       {printData && (

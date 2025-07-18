@@ -6,6 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { useToast } from '../hooks/use-toast';
 import { userAddressesService, UserAddress, UserWithAddresses } from '../services/userAddresses';
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription
+} from './ui/dialog';
 
 interface AddressSelectorProps {
   onAddressSelect: (address: string, userId?: number) => void;
@@ -26,6 +35,10 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
   const [loading, setLoading] = useState(false);
   const [showAddresses, setShowAddresses] = useState(false);
   const { toast } = useToast();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newLabel, setNewLabel] = useState('');
+  const [newAddress, setNewAddress] = useState('');
+  const [adding, setAdding] = useState(false);
 
   // Buscar usuário e endereços por telefone
   const searchUserByPhone = async () => {
@@ -92,7 +105,6 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
   // Selecionar endereço
   const handleAddressSelect = (address: UserAddress) => {
     onAddressSelect(address.address, user?.id);
-    setShowAddresses(false);
     
     toast({
       title: "Endereço selecionado",
@@ -100,14 +112,8 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
     });
   };
 
-  // Adicionar novo endereço
+  // Adicionar novo endereço (modal)
   const handleAddAddress = async () => {
-    const label = prompt('Digite um nome para o endereço (ex: Casa, Trabalho):');
-    if (!label) return;
-    
-    const address = prompt('Digite o endereço completo:');
-    if (!address) return;
-    
     if (!user) {
       toast({
         title: "Erro",
@@ -116,21 +122,29 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
       });
       return;
     }
-
-    try {
-      const newAddress = await userAddressesService.addAddress({
-        label,
-        address,
-        is_default: addresses.length === 0 // Se for o primeiro endereço, definir como padrão
+    if (!newLabel.trim() || !newAddress.trim()) {
+      toast({
+        title: "Erro",
+        description: "Preencha todos os campos do endereço.",
+        variant: "destructive"
       });
-      
-      setAddresses(prev => [...prev, newAddress]);
-      
-      // Se for o primeiro endereço, selecionar automaticamente
+      return;
+    }
+    setAdding(true);
+    try {
+      const createdAddress = await userAddressesService.addAddress({
+        label: newLabel,
+        address: newAddress,
+        is_default: addresses.length === 0,
+        user_id: user.id
+      });
+      setAddresses(prev => [...prev, createdAddress]);
       if (addresses.length === 0) {
-        onAddressSelect(newAddress.address, user.id);
+        onAddressSelect(createdAddress.address, user.id);
       }
-      
+      setIsAddModalOpen(false);
+      setNewLabel('');
+      setNewAddress('');
       toast({
         title: "Sucesso",
         description: "Endereço adicionado com sucesso",
@@ -141,6 +155,8 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
         description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -203,9 +219,38 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Endereços salvos:</Label>
-                <Button variant="outline" size="sm" onClick={handleAddAddress}>
-                  + Novo
-                </Button>
+                <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      + Novo
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Novo Endereço</DialogTitle>
+                      <DialogDescription>Preencha os dados do novo endereço do cliente.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                      <Input
+                        placeholder="Nome do endereço (ex: Casa, Trabalho)"
+                        value={newLabel}
+                        onChange={e => setNewLabel(e.target.value)}
+                        disabled={adding}
+                      />
+                      <Input
+                        placeholder="Endereço completo"
+                        value={newAddress}
+                        onChange={e => setNewAddress(e.target.value)}
+                        disabled={adding}
+                      />
+                    </div>
+                    <DialogFooter>
+                      <Button onClick={handleAddAddress} disabled={adding}>
+                        {adding ? 'Salvando...' : 'Salvar'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {addresses.map((address) => (
@@ -241,9 +286,38 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
           {showAddresses && addresses.length === 0 && (
             <div className="text-center py-4">
               <p className="text-gray-500 mb-2">Nenhum endereço cadastrado</p>
-              <Button variant="outline" onClick={handleAddAddress}>
-                Adicionar primeiro endereço
-              </Button>
+              <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    Adicionar primeiro endereço
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Novo Endereço</DialogTitle>
+                    <DialogDescription>Preencha os dados do novo endereço do cliente.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-3">
+                    <Input
+                      placeholder="Nome do endereço (ex: Casa, Trabalho)"
+                      value={newLabel}
+                      onChange={e => setNewLabel(e.target.value)}
+                      disabled={adding}
+                    />
+                    <Input
+                      placeholder="Endereço completo"
+                      value={newAddress}
+                      onChange={e => setNewAddress(e.target.value)}
+                      disabled={adding}
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button onClick={handleAddAddress} disabled={adding}>
+                      {adding ? 'Salvando...' : 'Salvar'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           )}
         </CardContent>

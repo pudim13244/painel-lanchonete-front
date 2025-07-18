@@ -63,6 +63,7 @@ export interface Order {
   customer_name?: string; // Nome do cliente no momento do pedido
   customer_phone?: string; // Telefone do cliente no momento do pedido
   delivery_person_name?: string; // Nome do entregador
+  delivery_assigned?: boolean; // Se o entregador foi atribuído automaticamente
   items: OrderItem[];
 }
 
@@ -353,9 +354,15 @@ export const assignDeliveryAuto = async (
   try {
     const response = await api.post(`/establishment/orders/${orderId}/assign-delivery-auto`);
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao atribuir entregador automaticamente:', error);
-    throw new Error('Erro ao atribuir entregador automaticamente');
+    
+    // Verificar se é o erro específico de entregadores não vinculados
+    if (error.response?.status === 400 && error.response?.data?.code === 'NO_LINKED_DELIVERY') {
+      throw new Error('Nenhum entregador vinculado disponível. Vincule entregadores ao seu estabelecimento para atribuição automática.');
+    }
+    
+    throw new Error(error.response?.data?.message || 'Erro ao atribuir entregador automaticamente');
   }
 };
 
@@ -370,4 +377,23 @@ export const removeDeliveryFromOrder = async (
     console.error('Erro ao remover entregador:', error);
     throw new Error('Erro ao remover entregador do pedido');
   }
+}; 
+
+// Buscar ofertas de entregadores para um pedido
+export const getOrderOffers = async (orderId: number) => {
+  const { data } = await api.get(`/orders/${orderId}/offers`);
+  return data.offers;
+}; 
+
+// Buscar entregadores do histórico de um estabelecimento
+export const getDeliveryHistoryDeliverers = async (establishmentId: number) => {
+  const { data } = await api.get(`/orders/establishments/${establishmentId}/delivery-history/deliverers`);
+  return data.deliverers;
+};
+
+// Buscar histórico de entregas de um entregador, com filtro de data
+export const getDeliveryHistoryByDeliverer = async (establishmentId: number, deliveryId: number, date?: string) => {
+  const params = date ? { date } : {};
+  const { data } = await api.get(`/orders/establishments/${establishmentId}/delivery-history/${deliveryId}`, { params });
+  return data;
 }; 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -320,6 +320,9 @@ const Index = () => {
           onAddToCart={addToCart}
         />
       )}
+      <div className="mt-8">
+        <Link to="/delivery-history" className="text-blue-600 underline">Histórico de Entregadores</Link>
+      </div>
     </div>
   );
 };

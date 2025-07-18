@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import api from '@/lib/axios';
 import { PrintOrder } from "./PrintOrder";
 import { EstablishmentService } from '@/services/establishment';
+import { AddressSelector } from './AddressSelector';
 
 interface Option {
   id: number;
@@ -258,13 +259,18 @@ export const CartSidebar = ({ isOpen, onClose, items, onUpdateItems, orderType, 
       items: items.map(item => ({
         product_id: item.id,
         quantity: item.quantity,
-        selected_options: item.selectedOptions,
+        price: item.price,
+        additions: item.selectedOptions.map(opt => ({
+          id: opt.id,
+          quantity: opt.quantity,
+          price: opt.price
+        })),
         obs: item.obs || ''
       })),
-      name: customerInfo.name,
-      phone: customerInfo.phone,
-      address: customerInfo.address,
-      orderType,
+      customer_name: customerInfo.name,
+      customer_phone: customerInfo.phone,
+      delivery_address: customerInfo.address,
+      order_type: orderType === 'delivery' ? 'DELIVERY' : orderType === 'local' ? 'DINE_IN' : 'PICKUP',
       payment_method: paymentMethod,
       amount_paid: paymentMethod === 'CASH' ? Number(amountPaid) || 0 : null
     };
@@ -389,32 +395,40 @@ export const CartSidebar = ({ isOpen, onClose, items, onUpdateItems, orderType, 
                 <div className="space-y-4">
                   {orderType === "delivery" && (
                     <>
+                      <AddressSelector
+                        onAddressSelect={(address, userId) => setCustomerInfo((prev) => ({ ...prev, address }))}
+                        onUserSelect={(user) => setCustomerInfo((prev) => ({ ...prev, name: user.name, phone: user.phone }))}
+                        selectedAddress={customerInfo.address}
+                      />
                       <div>
-                        <Label htmlFor="name">Nome</Label>
-                        <Input
-                          id="name"
-                          value={customerInfo.name}
-                          onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-                          placeholder="Seu nome completo"
-                        />
+                        <Label>Nome</Label>
+                        <div className="p-2 bg-blue-50 border border-blue-200 rounded min-h-[40px] flex items-center">
+                          {customerInfo.name ? (
+                            <span className="text-gray-800">{customerInfo.name}</span>
+                          ) : (
+                            <span className="text-gray-400">Selecione um cliente acima</span>
+                          )}
+                        </div>
                       </div>
                       <div>
-                        <Label htmlFor="phone">Telefone</Label>
-                        <Input
-                          id="phone"
-                          value={customerInfo.phone}
-                          onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
-                          placeholder="(00) 00000-0000"
-                        />
+                        <Label>Telefone</Label>
+                        <div className="p-2 bg-blue-50 border border-blue-200 rounded min-h-[40px] flex items-center">
+                          {customerInfo.phone ? (
+                            <span className="text-gray-800">{customerInfo.phone}</span>
+                          ) : (
+                            <span className="text-gray-400">Selecione um cliente acima</span>
+                          )}
+                        </div>
                       </div>
                       <div>
-                        <Label htmlFor="address">Endereço</Label>
-                        <Textarea
-                          id="address"
-                          value={customerInfo.address}
-                          onChange={(e) => setCustomerInfo({ ...customerInfo, address: e.target.value })}
-                          placeholder="Endereço completo para entrega"
-                        />
+                        <Label>Endereço</Label>
+                        <div className="p-2 bg-blue-50 border border-blue-200 rounded min-h-[48px] flex items-center">
+                          {customerInfo.address ? (
+                            <span className="text-gray-800">{customerInfo.address}</span>
+                          ) : (
+                            <span className="text-gray-400">Selecione um endereço acima</span>
+                          )}
+                        </div>
                       </div>
                       <div>
                         <Label>Método de Pagamento</Label>

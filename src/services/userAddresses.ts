@@ -21,7 +21,7 @@ export const userAddressesService = {
   // Buscar usuário e endereços por telefone
   async getByPhone(phone: string): Promise<{ user: UserWithAddresses | null; addresses: UserAddress[] }> {
     try {
-      const response = await axios.get(`/api/user-addresses/by-phone/${phone}`);
+      const response = await axios.get(`/user-addresses/by-phone/${phone}?role=CUSTOMER`);
       
       if (response.data.success) {
         return {
@@ -42,7 +42,7 @@ export const userAddressesService = {
   // Listar endereços de um usuário
   async getUserAddresses(userId: number): Promise<UserAddress[]> {
     try {
-      const response = await axios.get(`/api/user-addresses/user/${userId}`);
+      const response = await axios.get(`/user-addresses/user/${userId}`);
       
       if (response.data.success) {
         return response.data.addresses;
@@ -55,9 +55,9 @@ export const userAddressesService = {
   },
 
   // Adicionar novo endereço
-  async addAddress(data: { label: string; address: string; is_default?: boolean }): Promise<UserAddress> {
+  async addAddress(data: { label: string; address: string; is_default?: boolean; user_id?: number }): Promise<UserAddress> {
     try {
-      const response = await axios.post('/api/user-addresses', data);
+      const response = await axios.post('/user-addresses', data);
       
       if (response.data.success) {
         return response.data.address;
@@ -70,9 +70,9 @@ export const userAddressesService = {
   },
 
   // Atualizar endereço
-  async updateAddress(addressId: number, data: { label: string; address: string; is_default?: boolean }): Promise<UserAddress> {
+  async updateAddress(addressId: number, data: { label: string; address: string; is_default?: boolean; user_id?: number }): Promise<UserAddress> {
     try {
-      const response = await axios.put(`/api/user-addresses/${addressId}`, data);
+      const response = await axios.put(`/user-addresses/${addressId}`, data);
       
       if (response.data.success) {
         return response.data.address;
@@ -87,7 +87,7 @@ export const userAddressesService = {
   // Excluir endereço
   async deleteAddress(addressId: number): Promise<void> {
     try {
-      const response = await axios.delete(`/api/user-addresses/${addressId}`);
+      const response = await axios.delete(`/user-addresses/${addressId}`);
       
       if (!response.data.success) {
         throw new Error(response.data.message);
@@ -100,7 +100,7 @@ export const userAddressesService = {
   // Definir endereço como padrão
   async setDefaultAddress(addressId: number): Promise<void> {
     try {
-      const response = await axios.patch(`/api/user-addresses/${addressId}/set-default`);
+      const response = await axios.patch(`/user-addresses/${addressId}/set-default`);
       
       if (!response.data.success) {
         throw new Error(response.data.message);

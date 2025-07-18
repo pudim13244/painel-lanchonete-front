@@ -18,6 +18,7 @@ import NotFound from "./pages/NotFound";
 import DeliveryPeople from "./pages/DeliveryPeople";
 import EditOrderPage from "./pages/EditOrder";
 import Register from "./pages/Register";
+import DeliveryHistory from './pages/DeliveryHistory';
 
 const queryClient = new QueryClient();
 
@@ -98,6 +99,14 @@ const App = () => (
                     <EditOrderPage />
                   </ErrorBoundary>
                 </ProtectedRoute>
+              } />
+              
+              <Route path="/delivery-history" element={
+                <EstablishmentRoute>
+                  <ErrorBoundary>
+                    <DeliveryHistory />
+                  </ErrorBoundary>
+                </EstablishmentRoute>
               } />
               
               {/* Rota 404 */}
